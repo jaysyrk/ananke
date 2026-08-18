@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mlugg/setup-zig@v1
+        with:
+          version: 0.16.0
+
+      - name: Formatting
+        run: zig fmt --check .
+
+      - name: Build
+        run: zig build
+
+      - name: Tests, including the must-not-compile suite
+        run: zig build test
+
+      - name: Generated config is up to date with the topology
+        run: |
+          zig build emit
+          git diff --exit-code generated/ || {
+            echo "::error::generated/ is stale; run 'zig build emit' and commit the result"
+            exit 1
+          }
